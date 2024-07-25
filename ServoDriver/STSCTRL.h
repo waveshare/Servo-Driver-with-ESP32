@@ -3,7 +3,7 @@
 
 
 // === SC Servo ===
-#define CTRL_SC_SERVO
+#ifdef CTRL_SC_SERVO
 SCSCL st;
 float ServoDigitalRange = 1023.0;
 float ServoAngleRange   = 210.0;
@@ -12,21 +12,21 @@ float ServoDigitalMiddle= 511.0;
 #define ServoMaxSpeed     1500
 #define MaxSpeed_X        1500
 #define ServoInitSpeed    1500
-int SERVO_TYPE_SELECT = 2;
 int MAX_MIN_OFFSET = 30;
 #define SMS_STS_ID SCSCL_ID
+#endif // ifdef CTRL_SC_SERVO
 
 // === ST Servo ===
-// #define CTRL_ST_SERVO
-// SMS_STS st;
-// float ServoDigitalRange = 4095.0;
-// float ServoAngleRange   = 360.0;
-// float ServoDigitalMiddle= 2047.0;
-// #define ServoInitACC      100
-// #define ServoMaxSpeed     4000
-// #define MaxSpeed_X        4000
-// #define ServoInitSpeed    2000
-// int SERVO_TYPE_SELECT = 1
+#ifdef CTRL_ST_SERVO
+SMS_STS st;
+float ServoDigitalRange = 4095.0;
+float ServoAngleRange   = 360.0;
+float ServoDigitalMiddle= 2047.0;
+#define ServoInitACC      100
+#define ServoMaxSpeed     4000
+#define MaxSpeed_X        4000
+#define ServoInitSpeed    2000
+#endif // ifdef CTRL_ST_SERVO
 
 // set the servo ID list.
 byte ID_List[253];
@@ -95,29 +95,29 @@ void setMiddle(byte InputID){
 void setMode(byte InputID, byte InputMode){
   st.unLockEprom(InputID);
   if(InputMode == 0){
-    if(SERVO_TYPE_SELECT == 1){
+#ifdef CTRL_ST_SERVO
       st.writeWord(InputID, 11, 4095);
       st.writeByte(InputID, SMS_STS_MODE, InputMode);
-    }
-    else if(SERVO_TYPE_SELECT == 2){
+#endif
+#ifdef CTRL_SC_SERVO
       st.writeWord(InputID, SCSCL_MIN_ANGLE_LIMIT_L, 20);
       // st.writeWord(InputID, SCSCL_MIN_ANGLE_LIMIT_H, 5123);
       st.writeWord(InputID, SCSCL_MAX_ANGLE_LIMIT_L, 1003);
       // st.writeWord(InputID, SCSCL_MAX_ANGLE_LIMIT_H, 60240);
-    }
+#endif
   }
 
   else if(InputMode == 3){
-    if(SERVO_TYPE_SELECT == 1){
+#ifdef CTRL_ST_SERVO
       st.writeByte(InputID, SMS_STS_MODE, InputMode);
       st.writeWord(InputID, 11, 0);
-    }
-    else if(SERVO_TYPE_SELECT == 2){
+#endif
+#ifdef CTRL_SC_SERVO
       st.writeWord(InputID, SCSCL_MIN_ANGLE_LIMIT_L, 0);
       // st.writeWord(InputID, SCSCL_MIN_ANGLE_LIMIT_H, 0);
       st.writeWord(InputID, SCSCL_MAX_ANGLE_LIMIT_L, 0);
       // st.writeWord(InputID, SCSCL_MAX_ANGLE_LIMIT_H, 0);
-    }
+#endif
   }
   st.LockEprom(InputID);
 }

@@ -20,6 +20,12 @@ typedef struct struct_message {
 // Create a struct_message called myData
 struct_message myData;
 
+// Choose your servo type here
+// Uncomment the line corresponding to your servo type
+// You can only have one active at a time.
+//#define CTRL_ST_SERVO // For ST servos
+#define CTRL_SC_SERVO // For SC servos
+
 // set the default role here.
 // 0 as normal mode.
 // 1 as leader, ctrl other device via ESP-NOW.

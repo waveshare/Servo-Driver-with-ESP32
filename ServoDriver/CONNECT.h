@@ -47,73 +47,93 @@ int rangeCtrl(int rawInput, int minInput, int maxInput){
 
 void activeCtrl(int cmdInput){
   switch(cmdInput){
+    // Middle
     case 1:st.WritePosEx(listID[activeNumInList], ServoDigitalMiddle, activeServoSpeed, ServoInitACC);break;
+    // Stop
     case 2:
       if(modeRead[listID[activeNumInList]] == 0) {
         servoStop(listID[activeNumInList]);
       }
       else if(modeRead[listID[activeNumInList]] == 3){
-        st.WritePos(listID[activeNumInList], 0, 0, 0);
+        st.WritePosEx(listID[activeNumInList], 0, 0, 0);
       }
       break;
+    // Release
     case 3:servoTorque(listID[activeNumInList],0);Torque_List[activeNumInList] = false;break;
+    // Torque
     case 4:servoTorque(listID[activeNumInList],1);Torque_List[activeNumInList] = true;break;
+    // Position +
     case 5:
       if(modeRead[listID[activeNumInList]] == 0){
-        if(SERVO_TYPE_SELECT == 1){
+#ifdef CTRL_ST_SERVO
           st.WritePosEx(listID[activeNumInList], ServoDigitalRange - 1, activeServoSpeed, ServoInitACC);
-        }
-        else if(SERVO_TYPE_SELECT == 2){
+#endif
+#ifdef CTRL_SC_SERVO
           st.WritePosEx(listID[activeNumInList], ServoDigitalRange - MAX_MIN_OFFSET, activeServoSpeed, ServoInitACC);
-        }
+#endif
       }
 
 
       else if(modeRead[listID[activeNumInList]] == 3){
-        if(SERVO_TYPE_SELECT == 1){
-          st.WritePosEx(listID[activeNumInList], 10000, activeServoSpeed, ServoInitACC);
-        }
-        else if(SERVO_TYPE_SELECT == 2){
+#ifdef CTRL_ST_SERVO
+        st.WritePosEx(listID[activeNumInList], 10000, activeServoSpeed, ServoInitACC);
+#endif
+#ifdef CTRL_SC_SERVO
           st.WritePos(listID[activeNumInList], 0, rangeCtrl(activeServoSpeed,200,999), 0);
-        }
+#endif
       }
       break;
+    // Position -
     case 6:
       if(modeRead[listID[activeNumInList]] == 0){
-        if(SERVO_TYPE_SELECT == 1){
+#ifdef CTRL_ST_SERVO
           st.WritePosEx(listID[activeNumInList], 0, activeServoSpeed, ServoInitACC);
-        }
-        else if(SERVO_TYPE_SELECT == 2){
+#endif
+#ifdef CTRL_SC_SERVO
           st.WritePosEx(listID[activeNumInList], MAX_MIN_OFFSET, activeServoSpeed, ServoInitACC);
-        }
+#endif
       }
-
 
       else if(modeRead[listID[activeNumInList]] == 3){
-        if(SERVO_TYPE_SELECT == 1){
+#ifdef CTRL_ST_SERVO
           st.WritePosEx(listID[activeNumInList], -10000, activeServoSpeed, ServoInitACC);
-        }
-        else if(SERVO_TYPE_SELECT == 2){
+#endif
+#ifdef CTRL_SC_SERVO
           st.WritePos(listID[activeNumInList], 0, rangeCtrl(activeServoSpeed,200,999)+1024, 0);
-        }
+#endif
       }
       break;
+    // Speed +
     case 7:activeSpeed(100);break;
+    // Speed -
     case 8:activeSpeed(-100);break;
+    // ID to set +
     case 9:servotoSet += 1;if(servotoSet > 250){servotoSet = 0;}break;
+    // ID to set -
     case 10:servotoSet -= 1;if(servotoSet < 0){servotoSet = 0;}break;
+    // Set Middle position
     case 11:setMiddle(listID[activeNumInList]);break;
+    // Set Servo Mode
     case 12:setMode(listID[activeNumInList], 0);break;
+    // Set Motor mode
     case 13:setMode(listID[activeNumInList], 3);break;
+    // Start Serial Forwarding
     case 14:SERIAL_FORWARDING = true;break;
+    // End Serial Forwarding
     case 15:SERIAL_FORWARDING = false;break;
+    // Set New ID
     case 16:setID(listID[activeNumInList], servotoSet);break;
 
+    // Set role as Normal
     case 17:DEV_ROLE = 0;break;
+    // Set Role as Leader
     case 18:DEV_ROLE = 1;break;
+    // Set Role as Follower
     case 19:DEV_ROLE = 2;break;
 
+    // Rainbow On
     case 20:RAINBOW_STATUS = 1;break;
+    // Rainbow OFF
     case 21:RAINBOW_STATUS = 0;break;
   }
 }
@@ -130,11 +150,11 @@ void handleID() {
     for(int i = 0; i< searchNum; i++){
       IDmessage += String(listID[i]) + " ";
     }
-    server.send(200, "text/plane", IDmessage);
+    server.send(200, "text/plain", IDmessage);
   }
   else if(searchedStatus){
     String IDmessage = "Searching...";
-    server.send(200, "text/plane", IDmessage);
+    server.send(200, "text/plain", IDmessage);
   }
 }
 
@@ -177,7 +197,7 @@ void handleSTS() {
   else{
     stsValue += " FeedBack err";
   }
-  server.send(200, "text/plane", stsValue); //Send ADC value only to client ajax request
+  server.send(200, "text/plain", stsValue); //Send ADC value only to client ajax request
 }
 
 
@@ -197,6 +217,7 @@ void webCtrlServer(){
       case 1:activeCtrl(cmdI);break;
       case 9:searchCmd = true;break;
     }
+    server.send(204);
   });
 
   // Start server
@@ -267,7 +288,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 
-void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+void OnDataRecv(const esp_now_recv_info * mac, const uint8_t *incomingData, int len) {
   if(DEV_ROLE == 2){
     memcpy(&myData, incomingData, sizeof(myData));
     myData.Spd_send = abs(myData.Spd_send);
