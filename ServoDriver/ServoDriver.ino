@@ -92,7 +92,7 @@ void toggle_serial_forwarding() {
 }
 
 void setup() {
-  Serial.begin(921600);
+  Serial.begin(115200);
   while(!Serial) {}
 
   espNowInit();
