@@ -41,6 +41,9 @@ struct_message myData;
 #define S_SCL 22
 #define S_SDA 21
 
+// BOOT pin to enable/disable serial forwarding
+#define BOOT 0
+
 // the GPIO used to control RGB LEDs.
 // GPIO 23, as default.
 #define RGB_LED   23
@@ -50,8 +53,8 @@ struct_message myData;
 int MAX_ID = 20;
 
 // modeSelected.
-// set the SERIAL_FORWARDING as true to control the servos with USB.
-bool SERIAL_FORWARDING = false;
+// set the serial_forwarding as true to control the servos with USB.
+volatile bool serial_forwarding = true;
 
 // OLED Screen Dispaly.
 // Row1: MAC address.
@@ -84,6 +87,10 @@ int    WIFI_RSSI;
 #include "BOARD_DEV.h"
 
 
+void toggle_serial_forwarding() {
+  serial_forwarding = !serial_forwarding;
+}
+
 void setup() {
   Serial.begin(115200);
   while(!Serial) {}
@@ -91,7 +98,7 @@ void setup() {
   espNowInit();
 
   getMAC();
-  
+
   boardDevInit();
 
   RGBcolor(0, 64, 255);
@@ -99,6 +106,12 @@ void setup() {
   servoInit();
 
   wifiInit();
+  if (serial_forwarding) {
+    wifiStop();
+  }
+  else {
+    wifiStart();
+  }
 
   webServerSetup();
 
@@ -108,62 +121,11 @@ void setup() {
   pingAll(true);
 
   threadInit();
+
+  attachInterrupt(digitalPinToInterrupt(BOOT), toggle_serial_forwarding, RISING);
 }
 
 
 void loop() {
   delay(300000);
-
-  // st.WritePosEx(1, 25, 600, 0);
-  // st.WritePosEx(2, 25, 600, 0);
-  // st.WritePosEx(3, 25, 600, 0);
-  // delay(2000);
-
-  // st.WritePosEx(1, 1000, 600, 0);
-  // st.WritePosEx(2, 1000, 600, 0);
-  // st.WritePosEx(3, 1000, 600, 0);
-  // delay(2000);
 }
-
-
-// > > > > > > > > > DOC < < < < < < < < <
-// === Develop Board Ctrl ===
-// get the MAC address and save it in MAC_ADDRESS;
-// getMAC();
-
-// Init GPIO.
-// pinMode(PIN_NUM, OUTPUT);
-// pinMode(PIN_NUM, INPUT_PULLUP);
-
-// set the level of GPIO.
-// digitalWrite(PIN_NUM, LOW);
-// digitalWrite(PIN_NUM, HIGH);
-
-// PWM output(GPIO).
-// int freq = 50;
-// resolution = 12;
-// ledcSetup(PWM_NUM, frep, resolution);
-// ledcAttachPin(PIN_NUM, PWM_NUM);
-// ledcWrite(PWM_NUM, PWM);
-
-
-// === Servo Ctrl ===
-// GPIO 18 as RX, GPIO 19 as TX, init the serial and the servos.
-// servoInit();
-
-// set the position as middle pos.
-// setMiddle(servoID);
-// st.WritePosEx(ID, position, speed, acc);
-
-
-
-// === Devices Ctrl ===
-// ctrl the RGB.
-// 0 < (R, G, B) <= 255
-// setSingleLED(LED_ID, matrix.Color(R, G, B));
-
-// init the OLED screen, RGB_LED.
-// boardDevInit();
-
-// dispaly the newest information on the screen.
-// screenUpdate();

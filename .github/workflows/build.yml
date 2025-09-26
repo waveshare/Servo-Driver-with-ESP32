@@ -1,0 +1,67 @@
+name: PlatformIO Build
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install esptool
+        run: pip install esptool
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Build PlatformIO Project
+        run: pio run
+
+      - name: Merge Binaries
+        run: |
+          python -m esptool --chip esp32 merge_bin -o .pio/build/esp32dev/merged-firmware.bin \
+          0x1000 .pio/build/esp32dev/bootloader.bin \
+          0x8000 .pio/build/esp32dev/partitions.bin \
+          0x10000 .pio/build/esp32dev/firmware.bin
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-binaries
+          path: .pio/build/esp32dev/
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%d-%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: Latest Firmware Release
+          draft: false
+          prerelease: false
+          overwrite: true
+          files: |
+            .pio/build/esp32dev/merged-firmware.bin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy merged-firmware.bin to root
+        run: cp .pio/build/esp32dev/merged-firmware.bin merged-firmware.bin
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .

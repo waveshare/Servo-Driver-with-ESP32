@@ -1,0 +1,22 @@
+{
+    "name": "ESP32 PlatformIO Development",
+    "image": "mcr.microsoft.com/devcontainers/cpp:latest",
+    "features": {
+        "ghcr.io/devcontainers/features/common-utils:2": {
+            "installZsh": true,
+            "installOhMyZsh": true,
+            "upgradePackages": true
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "platformio.platformio-ide",
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools"
+            ]
+        }
+    },
+    "postCreateCommand": "pip install platformio",
+    "remoteUser": "vscode"
+}

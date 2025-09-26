@@ -26,19 +26,23 @@ void screenUpdate(){
   display.setTextColor(SSD1306_WHITE);
   display.setCursor(0,0);
   // Row1.
-  display.print(F("MAC:"));display.println(MAC_ADDRESS);
+  if (!serial_forwarding){display.print(F("MAC:"));display.println(MAC_ADDRESS);}
+  else display.println(F(""));
   // Row2.
-  display.print(F("V:"));display.print(float(voltageRead[listID[activeNumInList]])/10);display.print(F(" "));display.println(IP_ADDRESS);
+  display.print(F("V:"));display.print(float(voltageRead[listID[activeNumInList]])/10);
+  if (!serial_forwarding){display.print(F(" "));display.println(IP_ADDRESS);}
+  else display.println(F(""));
   // Row3.
   display.print(F("MODE:"));
-
-  if(DEV_ROLE == 1){display.print(F("L"));}
+  if (serial_forwarding){display.println(F("SF"));}
+  else if(DEV_ROLE == 1){display.print(F("L"));}
   else if(DEV_ROLE == 2){display.print(F("F"));}
   else if(DEV_ROLE == 0){display.print(F("N"));}
-
-  if(WIFI_MODE == 1){display.print(F(" AP "));display.println(AP_SSID);}
-  else if(WIFI_MODE == 2){display.print(F(" STA "));display.print(F("RSSI"));display.println(WIFI_RSSI);}
-  else if(WIFI_MODE == 3){display.print(F(" TRY:"));display.print(STA_SSID);display.println(F(""));}
+  if (!serial_forwarding) {
+    if(WIFI_MODE == 1){display.print(F(" AP "));display.println(AP_SSID);}
+    else if(WIFI_MODE == 2){display.print(F(" STA "));display.print(F("RSSI"));display.println(WIFI_RSSI);}
+    else if(WIFI_MODE == 3){display.print(F(" TRY:"));display.print(STA_SSID);display.println(F(""));}
+  }
 
   // Row4.
   if(searchNum){
@@ -107,10 +111,10 @@ void espNowSendData(){
   myData.ID_send = listID[activeNumInList];
   myData.POS_send = posRead[listID[activeNumInList]];
   myData.Spd_send = speedRead[listID[activeNumInList]];
-  
+
   // Send message via ESP-NOW
   esp_err_t result = esp_now_send(broadcastAddress, (uint8_t *) &myData, sizeof(myData));
-   
+
   if (result == ESP_OK) {
     Serial.println("Sent with success");
   }
@@ -123,40 +127,18 @@ void espNowSendData(){
 
 void InfoUpdateThreading(void *pvParameter){
   while(1){
-    if(!SERIAL_FORWARDING && !RAINBOW_STATUS){
-      getFeedBack(listID[activeNumInList]);
-      getWifiStatus();
-      screenUpdate();
-      delay(threadingInterval);
-      pingAll(searchCmd);
-    }
-    else if(SERIAL_FORWARDING){
-      display.clearDisplay();
-      display.setTextSize(1);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(0,0);
-      display.println(F(" - - - - - - - -"));
-      display.println(F("SERIAL_FORWARDING"));
-      display.println(F(" - - - - - - - -"));
-      display.display();
-      delay(1000);
-    }
-    else if(RAINBOW_STATUS){
-      display.clearDisplay();
-      display.setTextSize(3);
-      display.setTextColor(SSD1306_WHITE);
-      display.setCursor(0,0);
-      display.println(F("RAINBOW"));
-      display.display();
-      rainbow(30);
-    }
+    getFeedBack(listID[activeNumInList]);
+    getWifiStatus();
+    screenUpdate();
+    delay(threadingInterval);
+    pingAll(searchCmd);
   }
 }
 
 
 void workingModeSelect(){
-  if(SERIAL_FORWARDING){
-    while(SERIAL_FORWARDING){
+  if(serial_forwarding){
+    while(serial_forwarding){
       server.handleClient();
       if (Serial.available()){
         usbRead = Serial.read();
@@ -166,21 +148,13 @@ void workingModeSelect(){
         stsRead = Serial1.read();
         Serial.write(stsRead);
       }
-      // st.WritePosEx(1, 25, 600, 0);
-      // st.WritePosEx(2, 25, 600, 0);
-      // st.WritePosEx(3, 25, 600, 0);
-      // delay(2000);
-      // server.handleClient();
-      // st.WritePosEx(1, 1000, 600, 0);
-      // st.WritePosEx(2, 1000, 600, 0);
-      // st.WritePosEx(3, 1000, 600, 0);
-      // delay(2000);
     }
   }
 }
 
 
 void clientThreading(void *pvParameter){
+  bool serial_forwarding_old = serial_forwarding;
   while(1){
     server.handleClient();
     workingModeSelect();
@@ -189,6 +163,15 @@ void clientThreading(void *pvParameter){
     }
     if(DEV_ROLE == 1){
       espNowSendData();
+    }
+    if (serial_forwarding_old != serial_forwarding) {
+      serial_forwarding_old = serial_forwarding;
+      if (serial_forwarding) {
+        wifiStop();
+      }
+      else {
+        wifiStart();
+      }
     }
   }
 }

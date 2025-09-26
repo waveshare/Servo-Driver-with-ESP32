@@ -105,8 +105,8 @@ void activeCtrl(int cmdInput){
     case 11:setMiddle(listID[activeNumInList]);break;
     case 12:setMode(listID[activeNumInList], 0);break;
     case 13:setMode(listID[activeNumInList], 3);break;
-    case 14:SERIAL_FORWARDING = true;break;
-    case 15:SERIAL_FORWARDING = false;break;
+    case 14:serial_forwarding = true;break;
+    case 15:serial_forwarding = false;break;
     case 16:setID(listID[activeNumInList], servotoSet);break;
 
     case 17:DEV_ROLE = 0;break;
@@ -240,24 +240,35 @@ void setSTA(){
 
 
 void getWifiStatus(){
-  if(WiFi.status() == WL_CONNECTED){
-    WIFI_MODE = 2;
-    getIP();
-    WIFI_RSSI = WiFi.RSSI();
+  if (WiFi.getMode() != WIFI_OFF) {
+    if(WiFi.status() == WL_CONNECTED){
+      WIFI_MODE = 2;
+      getIP();
+      WIFI_RSSI = WiFi.RSSI();
+    }
+    else if(WiFi.status() == WL_CONNECTION_LOST && DEFAULT_WIFI_MODE == 2){
+      WIFI_MODE = 3;
+      // WiFi.disconnect();
+      WiFi.reconnect();
+    }
   }
-  else if(WiFi.status() == WL_CONNECTION_LOST && DEFAULT_WIFI_MODE == 2){
-    WIFI_MODE = 3;
-    // WiFi.disconnect();
-    WiFi.reconnect();
-  }
+}
+
+
+void wifiStart(){
+  if(WIFI_MODE == 1){setAP();}
+  else if(WIFI_MODE == 2){setSTA();}
+}
+
+
+void wifiStop(){
+  WiFi.softAPdisconnect(true);
 }
 
 
 void wifiInit(){
   DEV_ROLE  = DEFAULT_ROLE;
   WIFI_MODE = DEFAULT_WIFI_MODE;
-  if(WIFI_MODE == 1){setAP();}
-  else if(WIFI_MODE == 2){setSTA();}
 }
 
 
@@ -267,7 +278,7 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 
-void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+void OnDataRecv(const  uint8_t* mac, const uint8_t *incomingData, int len) {
   if(DEV_ROLE == 2){
     memcpy(&myData, incomingData, sizeof(myData));
     myData.Spd_send = abs(myData.Spd_send);
@@ -304,10 +315,10 @@ void espNowInit(){
   // Register peer
   esp_now_peer_info_t peerInfo;
   memcpy(peerInfo.peer_addr, broadcastAddress, 6);
-  peerInfo.channel = 0;  
+  peerInfo.channel = 0;
   peerInfo.encrypt = false;
-  
-  // Add peer        
+
+  // Add peer
   if (esp_now_add_peer(&peerInfo) != ESP_OK){
     Serial.println("Failed to add peer");
     return;
